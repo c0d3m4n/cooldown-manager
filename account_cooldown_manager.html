@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account Cooldown Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --steam-bg:        #171a21;
+      --steam-panel:     #1b2838;
+      --steam-panel2:    #2a475e;
+      --steam-input:     #316282;
+      --steam-blue:      #1b9ae3;
+      --steam-blue-dark: #1a7bbf;
+      --steam-teal:      #66c0f4;
+      --steam-teal-dim:  #4d9dc9;
+      --steam-text:      #c6d4df;
+      --steam-text-dim:  #8f98a0;
+      --steam-text-dark: #627f99;
+      --steam-border:    #3d6c8a;
+      --steam-border2:   #2a475e;
+      --steam-green:     #a4d007;
+      --steam-green-bg:  #1a2d00;
+      --steam-red:       #e04040;
+      --steam-header:    #c6d4df;
+      --radius-sm: 3px;
+      --radius-md: 4px;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Motiva+Sans:wght@400;700&display=swap');
+
+    body {
+      font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
+      background: var(--steam-bg);
+      color: var(--steam-text);
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
+      position: relative;
+    }
+
+    #bg-video {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      z-index: -2;
+      opacity: 0.5;
+    }
+
+    #bg-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: linear-gradient(to bottom, rgba(10,12,18,0.5) 0%, rgba(10,12,18,0.65) 100%);
+      z-index: -1;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(to bottom, #000000 0%, #1b2838 100%);
+      border-bottom: 1px solid #000;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      height: 56px;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .steam-icon {
+      width: 28px; height: 28px;
+      fill: var(--steam-teal);
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--steam-teal);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--steam-border);
+      margin: 0 4px;
+    }
+
+    .header-sub {
+      font-size: 12px;
+      color: var(--steam-text-dim);
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Page layout ── */
+    .page {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1rem 3rem;
+    }
+
+    .page-heading {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--steam-teal);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--steam-border2);
+    }
+
+    /* ── Form card ── */
+    .form-card {
+      background: #2a2d30;
+      border: 1px solid #3a3d42;
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--steam-header);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .form-title svg { color: var(--steam-teal); }
+
+    .field-label {
+      font-size: 12px;
+      color: var(--steam-text-dim);
+      margin-bottom: 5px;
+      display: block;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 13px;
+      border: 1px solid #4a4d52;
+      border-radius: var(--radius-sm);
+      background: #3a3d42;
+      color: var(--steam-text);
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input[type="text"] { margin-bottom: 1rem; }
+
+    input[type="text"]:focus, input[type="number"]:focus {
+      border-color: var(--steam-teal);
+      box-shadow: 0 0 0 2px rgba(102,192,244,0.18);
+      background: #444750;
+    }
+
+    input::placeholder { color: var(--steam-text-dark); }
+
+    /* ── Cooldown grid ── */
+    .cooldown-grid-wrap { margin-bottom: 1rem; }
+
+    .cooldown-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 0;
+    }
+
+    .cd-btn {
+      border: 1px solid #4a4d52;
+      background: linear-gradient(to bottom, #3a3d42 0%, #2e3135 100%);
+      border-radius: var(--radius-sm);
+      padding: 10px 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s ease;
+      color: var(--steam-text);
+      font-family: inherit;
+    }
+
+    .cd-btn:hover {
+      background: linear-gradient(to bottom, #46494e 0%, #3a3d42 100%);
+      border-color: #606368;
+    }
+
+    .cd-btn.selected {
+      background: linear-gradient(to bottom, #75b2dd 0%, #4d8fc7 100%);
+      border-color: var(--steam-teal);
+      color: #fff;
+    }
+
+    .cd-btn .cd-days {
+      font-size: 17px;
+      font-weight: 700;
+      display: block;
+      line-height: 1.2;
+      color: #fff;
+    }
+
+    .cd-btn .cd-label {
+      font-size: 10px;
+      color: var(--steam-text-dim);
+      display: block;
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .cd-btn.selected .cd-label { color: rgba(255,255,255,0.8); }
+
+    /* Custom input row */
+    .custom-input-wrap {
+      display: none;
+      margin-top: 8px;
+      gap: 8px;
+      align-items: center;
+    }
+    .custom-input-wrap.visible { display: flex; }
+
+    .custom-days-input { flex: 1; min-width: 0; }
+
+    .custom-days-label {
+      font-size: 13px;
+      color: var(--steam-text-dim);
+      white-space: nowrap;
+    }
+
+    /* ── Add button ── */
+    .add-btn {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(to right, #47bfff 0%, #1184c7 60%);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+      transition: filter 0.15s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .add-btn:hover { filter: brightness(1.1); }
+
+    /* ── Error ── */
+    .error-msg {
+      font-size: 12px;
+      color: var(--steam-red);
+      margin-top: -10px;
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--steam-teal);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--steam-border2);
+    }
+
+    /* ── Account rows ── */
+    .accounts-list { display: flex; flex-direction: column; gap: 4px; }
+
+    .account-row {
+      background: #2a2d30;
+      border: 1px solid #3a3d42;
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: fadeIn 0.2s ease;
+      transition: background 0.12s;
+    }
+
+    .account-row:hover { background: #323538; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(3px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .account-avatar {
+      width: 34px; height: 34px;
+      border-radius: 2px;
+      background: linear-gradient(135deg, #3a3d42, #2a2d30);
+      border: 1px solid #4a4d52;
+      color: var(--steam-teal);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .account-info { flex: 1; min-width: 0; }
+
+    .account-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--steam-header);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .account-meta {
+      font-size: 11px;
+      color: var(--steam-text-dark);
+      margin-top: 2px;
+    }
+
+    .cooldown-badge {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 2px;
+      background: var(--steam-green-bg);
+      color: var(--steam-green);
+      font-weight: 700;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border: 1px solid rgba(164,208,7,0.2);
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--steam-text-dark);
+      cursor: pointer;
+      padding: 5px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      font-size: 16px;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .delete-btn:hover { color: var(--steam-red); background: rgba(224,64,64,0.1); }
+
+    /* ── Zero day highlight ── */
+    .account-row.expired {
+      background: #0f2010;
+      border-color: #3a7a1a;
+    }
+
+    .account-row.expired:hover { background: #162a17; }
+
+    .account-row.expired .account-name { color: #a4d007; }
+
+    .account-row.expired .cooldown-badge {
+      background: #a4d007;
+      color: #0a1200;
+      border-color: #a4d007;
+      font-weight: 900;
+      animation: pulse-green 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse-green {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(164,208,7,0.5); }
+      50%       { box-shadow: 0 0 8px 3px rgba(164,208,7,0.25); }
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 2.5rem;
+      color: var(--steam-text-dark);
+      font-size: 13px;
+      border: 1px dashed var(--steam-border2);
+      border-radius: var(--radius-md);
+      background: var(--steam-panel);
+    }
+
+    .empty-state svg { display: block; margin: 0 auto 10px; opacity: 0.5; }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--steam-text-dark);
+      padding: 1rem;
+      border-top: 1px solid var(--steam-border2);
+      margin-top: 2rem;
+    }
+  
+    /* ── Discord lock screen ── */
+    #lock-screen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(10,12,18,0.97);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #lock-screen.hidden { display: none; }
+
+    .lock-box {
+      background: #2a2d30;
+      border: 1px solid #3a3d42;
+      border-radius: 8px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+
+    .lock-icon { margin-bottom: 1.2rem; }
+
+    .lock-title {
+      font-family: "Arial Black", Impact, sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: #c6d4df;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      text-shadow: 0 0 16px rgba(102,192,244,0.4);
+    }
+
+    .lock-sub {
+      font-size: 12px;
+      color: var(--steam-text-dim);
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .discord-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px;
+      background: #5865F2;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      font-family: inherit;
+      transition: filter 0.15s;
+      text-decoration: none;
+    }
+
+    .discord-btn:hover { filter: brightness(1.12); }
+
+    .lock-error {
+      font-size: 12px;
+      color: var(--steam-red);
+      margin-top: 12px;
+      min-height: 16px;
+      line-height: 1.5;
+    }
+
+    .lock-checking {
+      font-size: 12px;
+      color: var(--steam-teal);
+      margin-top: 12px;
+      display: none;
+    }
+
+    .lock-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #323538;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 1.2rem;
+      text-align: left;
+    }
+
+    .lock-user img {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      border: 2px solid #5865F2;
+    }
+
+    .lock-user-info { flex: 1; }
+    .lock-user-name { font-size: 14px; font-weight: 700; color: #c6d4df; }
+    .lock-user-tag  { font-size: 11px; color: var(--steam-text-dim); }
+
+  </style>
+</head>
+<body>
+  <video id="bg-video" autoplay loop muted playsinline>
+    <source src="https://shared.fastly.steamstatic.com/community_assets/images/items/730/28280d425d20a4d8cd9cfeff3389c234968ca301.webm" type="video/webm">
+  </video>
+  <div id="bg-overlay"></div>
+
+  <!-- Discord lock screen -->
+  <div id="lock-screen">
+    <div class="lock-box">
+      <div class="lock-icon">
+        <svg width="48" height="48" viewBox="0 0 71 55" fill="#5865F2" xmlns="http://www.w3.org/2000/svg">
+          <path d="M60.1 4.9A58.6 58.6 0 0 0 45.7.4a.2.2 0 0 0-.2.1 40.8 40.8 0 0 0-1.8 3.7 54.1 54.1 0 0 0-16.2 0A37.7 37.7 0 0 0 25.6.5a.2.2 0 0 0-.2-.1A58.4 58.4 0 0 0 11 4.9a.2.2 0 0 0-.1.1C1.6 18.7-.9 32.1.3 45.3a.2.2 0 0 0 .1.2 58.9 58.9 0 0 0 17.7 8.9.2.2 0 0 0 .2-.1 42 42 0 0 0 3.6-5.9.2.2 0 0 0-.1-.3 38.7 38.7 0 0 1-5.5-2.6.2.2 0 0 1 0-.4l1.1-.8a.2.2 0 0 1 .2 0c11.6 5.3 24.1 5.3 35.5 0a.2.2 0 0 1 .2 0l1.1.8a.2.2 0 0 1 0 .4 36.1 36.1 0 0 1-5.5 2.6.2.2 0 0 0-.1.3 47.1 47.1 0 0 0 3.6 5.9.2.2 0 0 0 .2.1 58.7 58.7 0 0 0 17.8-8.9.2.2 0 0 0 .1-.2c1.4-15.2-2.4-28.5-10-40.3a.2.2 0 0 0-.1-.1ZM23.7 37.3c-3.5 0-6.4-3.2-6.4-7.1s2.8-7.1 6.4-7.1c3.6 0 6.5 3.2 6.4 7.1 0 3.9-2.8 7.1-6.4 7.1Zm23.6 0c-3.5 0-6.4-3.2-6.4-7.1s2.8-7.1 6.4-7.1c3.6 0 6.5 3.2 6.4 7.1 0 3.9-2.8 7.1-6.4 7.1Z"/>
+        </svg>
+      </div>
+      <div class="lock-title">Access Required</div>
+      <div class="lock-sub" id="lock-sub">You must be a member of the authorized Discord server to use this app.</div>
+      <div id="lock-user-area"></div>
+      <a class="discord-btn" id="discord-login-btn" href="#" onclick="startDiscordAuth(); return false;">
+        <svg width="20" height="20" viewBox="0 0 71 55" fill="white"><path d="M60.1 4.9A58.6 58.6 0 0 0 45.7.4a.2.2 0 0 0-.2.1 40.8 40.8 0 0 0-1.8 3.7 54.1 54.1 0 0 0-16.2 0A37.7 37.7 0 0 0 25.6.5a.2.2 0 0 0-.2-.1A58.4 58.4 0 0 0 11 4.9a.2.2 0 0 0-.1.1C1.6 18.7-.9 32.1.3 45.3a.2.2 0 0 0 .1.2 58.9 58.9 0 0 0 17.7 8.9.2.2 0 0 0 .2-.1 42 42 0 0 0 3.6-5.9.2.2 0 0 0-.1-.3 38.7 38.7 0 0 1-5.5-2.6.2.2 0 0 1 0-.4l1.1-.8a.2.2 0 0 1 .2 0c11.6 5.3 24.1 5.3 35.5 0a.2.2 0 0 1 .2 0l1.1.8a.2.2 0 0 1 0 .4 36.1 36.1 0 0 1-5.5 2.6.2.2 0 0 0-.1.3 47.1 47.1 0 0 0 3.6 5.9.2.2 0 0 0 .2.1 58.7 58.7 0 0 0 17.8-8.9.2.2 0 0 0 .1-.2c1.4-15.2-2.4-28.5-10-40.3a.2.2 0 0 0-.1-.1ZM23.7 37.3c-3.5 0-6.4-3.2-6.4-7.1s2.8-7.1 6.4-7.1c3.6 0 6.5 3.2 6.4 7.1 0 3.9-2.8 7.1-6.4 7.1Zm23.6 0c-3.5 0-6.4-3.2-6.4-7.1s2.8-7.1 6.4-7.1c3.6 0 6.5 3.2 6.4 7.1 0 3.9-2.8 7.1-6.4 7.1Z"/></svg>
+        Login with Discord
+      </a>
+      <div class="lock-error" id="lock-error"></div>
+      <div class="lock-checking" id="lock-checking">⏳ Verifying server membership...</div>
+    </div>
+  </div>
+
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">
+      <svg class="steam-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.607 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.497 1.009 2.455-.397.957-1.494 1.41-2.455 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/>
+      </svg>
+      <span class="header-title">Steam</span>
+    </div>
+    <div class="header-divider"></div>
+    <span class="header-sub">Account Cooldown Manager</span>
+  </div>
+
+  <div class="page">
+    <p class="page-heading">Add New Account</p>
+
+    <div class="form-card">
+      <p class="form-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Account Details
+      </p>
+
+      <label class="field-label" for="acct-name">Account Name</label>
+      <input type="text" id="acct-name" placeholder="e.g. Main Account, Alt Account…" maxlength="60"
+        onkeydown="if(event.key==='Enter') addAccount()" />
+
+      <div class="error-msg" id="err-msg">Please fill in both an account name and cooldown period.</div>
+
+      <label class="field-label">Cooldown Period</label>
+      <div class="cooldown-grid-wrap">
+        <div class="cooldown-grid">
+          <button class="cd-btn" data-days="1" onclick="selectCd(this)">
+            <span class="cd-days">1</span><span class="cd-label">Day</span>
+          </button>
+          <button class="cd-btn" data-days="7" onclick="selectCd(this)">
+            <span class="cd-days">7</span><span class="cd-label">Days</span>
+          </button>
+          <button class="cd-btn" data-days="30" onclick="selectCd(this)">
+            <span class="cd-days">30</span><span class="cd-label">Days</span>
+          </button>
+          <button class="cd-btn" data-days="180" onclick="selectCd(this)">
+            <span class="cd-days">180</span><span class="cd-label">Days</span>
+          </button>
+          <button class="cd-btn" data-days="custom" onclick="selectCd(this)">
+            <span class="cd-days">✏️</span><span class="cd-label">Custom</span>
+          </button>
+        </div>
+        <div class="custom-input-wrap" id="custom-input-wrap">
+          <input class="custom-days-input" type="number" id="custom-days" min="0" max="9999" placeholder="e.g. 14" />
+          <span class="custom-days-label">days</span>
+        </div>
+      </div>
+
+      <button class="add-btn" onclick="addAccount()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add to List
+      </button>
+    </div>
+
+    <p class="section-label">Saved Accounts</p>
+    <div class="accounts-list" id="accounts-list">
+      <div class="empty-state" id="empty-state">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+        No accounts added yet
+      </div>
+    </div>
+
+    <div class="footer">© C0D3M4N — Account Cooldown Manager</div>
+  </div>
+
+  <script>
+    let selectedDays = null;
+    let accounts = JSON.parse(localStorage.getItem('cooldown_accounts') || '[]');
+    renderList();
+
+    // ── Discord OAuth2 Auth ──
+    const DISCORD_CLIENT_ID = '1513635727773274293';
+    const DISCORD_SERVER_ID = '1513636235393110227';
+    const REDIRECT_URI = window.location.href.split('#')[0];
+
+    function startDiscordAuth() {
+      const params = new URLSearchParams({
+        client_id: DISCORD_CLIENT_ID,
+        redirect_uri: REDIRECT_URI,
+        response_type: 'token',
+        scope: 'identify guilds'
+      });
+      window.location.href = 'https://discord.com/api/oauth2/authorize?' + params.toString();
+    }
+
+    async function handleDiscordCallback() {
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const token = params.get('access_token');
+      if (!token) return;
+
+      // Clean URL
+      history.replaceState(null, '', window.location.pathname);
+
+      const checking = document.getElementById('lock-checking');
+      const err = document.getElementById('lock-error');
+      const btn = document.getElementById('discord-login-btn');
+      const sub = document.getElementById('lock-sub');
+
+      checking.style.display = 'block';
+      btn.style.display = 'none';
+      sub.style.display = 'none';
+      err.textContent = '';
+
+      try {
+        // Get user info
+        const userRes = await fetch('https://discord.com/api/users/@me', {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        const user = await userRes.json();
+
+        // Get guilds
+        const guildsRes = await fetch('https://discord.com/api/users/@me/guilds', {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        const guilds = await guildsRes.json();
+
+        const isMember = Array.isArray(guilds) && guilds.some(g => g.id === DISCORD_SERVER_ID);
+
+        checking.style.display = 'none';
+
+        if (isMember) {
+          // Show user info then unlock
+          const avatar = user.avatar
+            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+            : `https://cdn.discordapp.com/embed/avatars/0.png`;
+
+          document.getElementById('lock-user-area').innerHTML = `
+            <div class="lock-user">
+              <img src="${avatar}" alt="avatar" />
+              <div class="lock-user-info">
+                <div class="lock-user-name">${user.username}</div>
+                <div class="lock-user-tag">✓ Server member verified</div>
+              </div>
+            </div>
+          `;
+
+          localStorage.setItem('acm_discord_unlocked', '1');
+          localStorage.setItem('acm_discord_user', JSON.stringify({ name: user.username, avatar }));
+
+          setTimeout(() => {
+            document.getElementById('lock-screen').classList.add('hidden');
+          }, 1200);
+
+        } else {
+          err.textContent = '✗ You are not a member of the required Discord server. Please join and try again.';
+          btn.style.display = 'inline-flex';
+          sub.style.display = 'block';
+        }
+
+      } catch(e) {
+        checking.style.display = 'none';
+        err.textContent = '✗ Verification failed. Please try again.';
+        btn.style.display = 'inline-flex';
+        sub.style.display = 'block';
+      }
+    }
+
+    // On load: check if already unlocked or handle OAuth callback
+    if (localStorage.getItem('acm_discord_unlocked') === '1') {
+      document.getElementById('lock-screen').classList.add('hidden');
+    } else {
+      handleDiscordCallback();
+    }
+
