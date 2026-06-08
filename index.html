@@ -648,9 +648,26 @@
     });
 
     async function handleDiscordCallback() {
-      const hash = window.location.hash.substring(1);
-      const params = new URLSearchParams(hash);
-      const token = params.get('access_token');
+      // Discord returns token in the URL hash after redirect
+      const rawHash = window.location.hash;
+      console.log('Hash on load:', rawHash);
+
+      // Sometimes Discord appends the hash as ?fragment, handle both
+      let token = null;
+      if (rawHash && rawHash.includes('access_token')) {
+        const hash = rawHash.substring(1);
+        const params = new URLSearchParams(hash);
+        token = params.get('access_token');
+      } else {
+        // Try reading from search params as fallback
+        const search = window.location.search;
+        if (search.includes('access_token')) {
+          const params = new URLSearchParams(search.substring(1));
+          token = params.get('access_token');
+        }
+      }
+
+      console.log('Token found:', token ? 'YES' : 'NO');
       if (!token) return;
 
       // Clean URL
