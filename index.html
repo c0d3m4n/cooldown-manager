@@ -651,12 +651,20 @@
 
     async function handleDiscordCallback() {
       const rawHash = window.location.hash;
-      if (!rawHash || !rawHash.includes('access_token')) return;
 
-      // Strip the leading # and parse all params
+      // Show error visibly if no token found
+      if (!rawHash || !rawHash.includes('access_token')) {
+        const err = document.getElementById('lock-error');
+        if (rawHash) err.textContent = '✗ No token in URL hash: ' + rawHash.substring(0, 60);
+        return;
+      }
+
       const params = new URLSearchParams(rawHash.substring(1));
       const token = params.get('access_token');
-      if (!token) return;
+      if (!token) {
+        document.getElementById('lock-error').textContent = '✗ Token param missing from hash.';
+        return;
+      }
 
       // Clean URL
       history.replaceState(null, '', window.location.pathname);
