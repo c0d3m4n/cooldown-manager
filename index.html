@@ -665,11 +665,7 @@
 
       // Read token from sessionStorage
       const token = sessionStorage.getItem('discord_token');
-      if (!token) {
-        const err = document.getElementById('lock-error');
-        err.textContent = '';
-        return;
-      }
+      if (!token) return;
 
       // Clear token from session so it cant be reused
       sessionStorage.removeItem('discord_token');
@@ -731,7 +727,8 @@
 
       } catch(e) {
         checking.style.display = 'none';
-        err.textContent = '✗ Verification failed: ' + e.message;
+        err.textContent = '✗ Error: ' + (e.message || JSON.stringify(e));
+        err.style.display = 'block';
         btn.style.display = 'inline-flex';
         sub.style.display = 'block';
         history.replaceState(null, '', window.location.pathname);
