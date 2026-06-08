@@ -643,32 +643,22 @@
       window.location.href = buildDiscordURL();
     }
 
-    // Set href on the login button so it works as a real link
-    window.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('discord-login-btn');
-      if (btn) btn.href = buildDiscordURL();
-    });
+
 
     async function handleDiscordCallback() {
+      // Read token directly from URL hash - don't clear it yet
       const rawHash = window.location.hash;
+      if (!rawHash || !rawHash.includes('access_token')) return;
 
-      // If token is in URL, save it to sessionStorage immediately before anything wipes it
-      if (rawHash && rawHash.includes('access_token')) {
-        const params = new URLSearchParams(rawHash.substring(1));
-        const t = params.get('access_token');
-        if (t) {
-          sessionStorage.setItem('discord_token', t);
-          // Clean URL immediately
-          history.replaceState(null, '', window.location.pathname);
-        }
+      const params = new URLSearchParams(rawHash.substring(1));
+      const token = params.get('access_token');
+      if (!token) {
+        document.getElementById('lock-error').textContent = '✗ Could not read token from URL.';
+        return;
       }
 
-      // Read token from sessionStorage
-      const token = sessionStorage.getItem('discord_token');
-      if (!token) return;
-
-      // Clear token from session so it cant be reused
-      sessionStorage.removeItem('discord_token');
+      // Clean URL
+      history.replaceState(null, '', window.location.pathname);
 
       const checking = document.getElementById('lock-checking');
       const err = document.getElementById('lock-error');
