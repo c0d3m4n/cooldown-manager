@@ -676,50 +676,59 @@
         });
         const user = await userRes.json();
 
+        if (!user || !user.id) {
+          throw new Error('Invalid user response');
+        }
+
         // Get guilds
         const guildsRes = await fetch('https://discord.com/api/users/@me/guilds', {
           headers: { Authorization: 'Bearer ' + token }
         });
         const guilds = await guildsRes.json();
 
-        const isMember = Array.isArray(guilds) && guilds.some(g => g.id === DISCORD_SERVER_ID);
-
         checking.style.display = 'none';
 
-        if (isMember) {
-          // Show user info then unlock
-          const avatar = user.avatar
-            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-            : `https://cdn.discordapp.com/embed/avatars/0.png`;
+        const isMember = Array.isArray(guilds) && guilds.some(g => g.id === DISCORD_SERVER_ID);
 
-          document.getElementById('lock-user-area').innerHTML = `
-            <div class="lock-user">
-              <img src="${avatar}" alt="avatar" />
-              <div class="lock-user-info">
-                <div class="lock-user-name">${user.username}</div>
-                <div class="lock-user-tag">✓ Server member verified</div>
-              </div>
-            </div>
-          `;
-
-          localStorage.setItem('acm_discord_unlocked', '1');
-          localStorage.setItem('acm_discord_user', JSON.stringify({ name: user.username, avatar }));
-
-          setTimeout(() => {
-            document.getElementById('lock-screen').classList.add('hidden');
-          }, 1200);
-
-        } else {
-          err.textContent = '✗ You are not a member of the required Discord server. Please join and try again.';
+        if (!isMember) {
+          err.textContent = '✗ You are not a member of the required Discord server.';
           btn.style.display = 'inline-flex';
           sub.style.display = 'block';
+          // Clean URL
+          history.replaceState(null, '', window.location.pathname);
+          return;
         }
+
+        const avatar = user.avatar
+          ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+          : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.discriminator || 0) % 5}.png`;
+
+        document.getElementById('lock-user-area').innerHTML = `
+          <div class="lock-user">
+            <img src="${avatar}" alt="avatar" />
+            <div class="lock-user-info">
+              <div class="lock-user-name">${user.username}</div>
+              <div class="lock-user-tag">✓ Server member verified</div>
+            </div>
+          </div>
+        `;
+
+        localStorage.setItem('acm_discord_unlocked', '1');
+        localStorage.setItem('acm_discord_user', JSON.stringify({ name: user.username, avatar }));
+
+        // Clean URL then unlock
+        history.replaceState(null, '', window.location.pathname);
+
+        setTimeout(() => {
+          document.getElementById('lock-screen').classList.add('hidden');
+        }, 1200);
 
       } catch(e) {
         checking.style.display = 'none';
-        err.textContent = '✗ Verification failed. Please try again.';
+        err.textContent = '✗ Verification failed: ' + e.message;
         btn.style.display = 'inline-flex';
         sub.style.display = 'block';
+        history.replaceState(null, '', window.location.pathname);
       }
     }
 
