@@ -627,7 +627,7 @@
     const DISCORD_SERVER_ID = '1513636235393110227';
     // Add Discord user IDs here to restrict access. Leave empty [] to allow ALL Discord users.
     const ALLOWED_IDS = ['85511363123777536'];
-    const REDIRECT_URI = window.location.href.split('#')[0];
+    const REDIRECT_URI = 'https://c0d3m4n.github.io/cooldown-manager/';
 
     function buildDiscordURL() {
       const params = new URLSearchParams({
@@ -726,9 +726,10 @@
     }
 
     // On load: check if already unlocked or handle OAuth callback
-    if (localStorage.getItem('acm_discord_unlocked') === '1') {
-      document.getElementById('lock-screen').classList.add('hidden');
-    } else {
-      handleDiscordCallback();
+    document.addEventListener('DOMContentLoaded', function() {
+      if (localStorage.getItem('acm_discord_unlocked') === '1') {
+        document.getElementById('lock-screen').classList.add('hidden');
+      } else {
+        handleDiscordCallback();
     }
 
