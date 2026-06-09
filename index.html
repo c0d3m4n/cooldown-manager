@@ -6,520 +6,96 @@
   <title>Account Cooldown Manager</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --steam-bg:        #171a21;
-      --steam-panel:     #1b2838;
-      --steam-panel2:    #2a475e;
-      --steam-input:     #316282;
-      --steam-blue:      #1b9ae3;
-      --steam-blue-dark: #1a7bbf;
-      --steam-teal:      #66c0f4;
-      --steam-teal-dim:  #4d9dc9;
-      --steam-text:      #c6d4df;
-      --steam-text-dim:  #8f98a0;
-      --steam-text-dark: #627f99;
-      --steam-border:    #3d6c8a;
-      --steam-border2:   #2a475e;
-      --steam-green:     #a4d007;
-      --steam-green-bg:  #1a2d00;
-      --steam-red:       #e04040;
-      --steam-header:    #c6d4df;
-      --radius-sm: 3px;
-      --radius-md: 4px;
+      --steam-bg: #171a21; --steam-panel: #1b2838; --steam-panel2: #2a475e;
+      --steam-blue: #1b9ae3; --steam-blue-dark: #1a7bbf; --steam-teal: #66c0f4;
+      --steam-teal-dim: #4d9dc9; --steam-text: #c6d4df; --steam-text-dim: #8f98a0;
+      --steam-text-dark: #627f99; --steam-border: #3d6c8a; --steam-border2: #2a475e;
+      --steam-green: #a4d007; --steam-green-bg: #1a2d00; --steam-red: #e04040;
+      --steam-header: #c6d4df; --radius-sm: 3px; --radius-md: 4px;
     }
+    body { font-family: Arial, Helvetica, sans-serif; background: var(--steam-bg); color: var(--steam-text); min-height: 100vh; padding: 0; margin: 0; position: relative; }
 
-    @import url('https://fonts.googleapis.com/css2?family=Motiva+Sans:wght@400;700&display=swap');
+    /* Video background */
+    #bg-video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; opacity: 0.5; }
+    #bg-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(10,12,18,0.5) 0%, rgba(10,12,18,0.65) 100%); z-index: -1; }
 
-    body {
-      font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
-      background: var(--steam-bg);
-      color: var(--steam-text);
-      min-height: 100vh;
-      padding: 0;
-      margin: 0;
-      position: relative;
-    }
-
-    #bg-video {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      object-fit: cover;
-      z-index: -2;
-      opacity: 0.5;
-    }
-
-    #bg-overlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: linear-gradient(to bottom, rgba(10,12,18,0.5) 0%, rgba(10,12,18,0.65) 100%);
-      z-index: -1;
-    }
-
-    /* ── Header ── */
-    .header {
-      background: linear-gradient(to bottom, #000000 0%, #1b2838 100%);
-      border-bottom: 1px solid #000;
-      padding: 0 2rem;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      height: 56px;
-    }
-
-    .header-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
-
-    .steam-icon {
-      width: 28px; height: 28px;
-      fill: var(--steam-teal);
-    }
-
-    .header-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--steam-teal);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .header-divider {
-      width: 1px;
-      height: 24px;
-      background: var(--steam-border);
-      margin: 0 4px;
-    }
-
-    .header-sub {
-      font-size: 12px;
-      color: var(--steam-text-dim);
-      letter-spacing: 0.02em;
-    }
-
-    /* ── Page layout ── */
-    .page {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 2rem 1rem 3rem;
-    }
-
-    .page-heading {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--steam-teal);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 1rem;
-      padding-bottom: 6px;
-      border-bottom: 1px solid var(--steam-border2);
-    }
-
-    /* ── Form card ── */
-    .form-card {
-      background: #2a2d30;
-      border: 1px solid #3a3d42;
-      border-radius: var(--radius-md);
-      padding: 1.25rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .form-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--steam-header);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-
-    .form-title svg { color: var(--steam-teal); }
-
-    .field-label {
-      font-size: 12px;
-      color: var(--steam-text-dim);
-      margin-bottom: 5px;
-      display: block;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    input[type="text"], input[type="number"] {
-      width: 100%;
-      padding: 8px 10px;
-      font-size: 13px;
-      border: 1px solid #4a4d52;
-      border-radius: var(--radius-sm);
-      background: #3a3d42;
-      color: var(--steam-text);
-      outline: none;
-      font-family: inherit;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-
-    input[type="text"] { margin-bottom: 1rem; }
-
-    input[type="text"]:focus, input[type="number"]:focus {
-      border-color: var(--steam-teal);
-      box-shadow: 0 0 0 2px rgba(102,192,244,0.18);
-      background: #444750;
-    }
-
-    input::placeholder { color: var(--steam-text-dark); }
-
-    /* ── Cooldown grid ── */
-    .cooldown-grid-wrap { margin-bottom: 1rem; }
-
-    .cooldown-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 6px;
-      margin-bottom: 0;
-    }
-
-    .cd-btn {
-      border: 1px solid #4a4d52;
-      background: linear-gradient(to bottom, #3a3d42 0%, #2e3135 100%);
-      border-radius: var(--radius-sm);
-      padding: 10px 6px;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.12s ease;
-      color: var(--steam-text);
-      font-family: inherit;
-    }
-
-    .cd-btn:hover {
-      background: linear-gradient(to bottom, #46494e 0%, #3a3d42 100%);
-      border-color: #606368;
-    }
-
-    .cd-btn.selected {
-      background: linear-gradient(to bottom, #75b2dd 0%, #4d8fc7 100%);
-      border-color: var(--steam-teal);
-      color: #fff;
-    }
-
-    .cd-btn .cd-days {
-      font-size: 17px;
-      font-weight: 700;
-      display: block;
-      line-height: 1.2;
-      color: #fff;
-    }
-
-    .cd-btn .cd-label {
-      font-size: 10px;
-      color: var(--steam-text-dim);
-      display: block;
-      margin-top: 2px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .cd-btn.selected .cd-label { color: rgba(255,255,255,0.8); }
-
-    /* Custom input row */
-    .custom-input-wrap {
-      display: none;
-      margin-top: 8px;
-      gap: 8px;
-      align-items: center;
-    }
-    .custom-input-wrap.visible { display: flex; }
-
-    .custom-days-input { flex: 1; min-width: 0; }
-
-    .custom-days-label {
-      font-size: 13px;
-      color: var(--steam-text-dim);
-      white-space: nowrap;
-    }
-
-    /* ── Add button ── */
-    .add-btn {
-      width: 100%;
-      padding: 10px;
-      background: linear-gradient(to right, #47bfff 0%, #1184c7 60%);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      font-family: inherit;
-      transition: filter 0.15s;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-    }
-
-    .add-btn:hover { filter: brightness(1.1); }
-
-    /* ── Error ── */
-    .error-msg {
-      font-size: 12px;
-      color: var(--steam-red);
-      margin-top: -10px;
-      margin-bottom: 10px;
-      display: none;
-    }
-
-    /* ── Section label ── */
-    .section-label {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--steam-teal);
-      margin-bottom: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding-bottom: 6px;
-      border-bottom: 1px solid var(--steam-border2);
-    }
-
-    /* ── Account rows ── */
-    .accounts-list { display: flex; flex-direction: column; gap: 4px; }
-
-    .account-row {
-      background: #2a2d30;
-      border: 1px solid #3a3d42;
-      border-radius: var(--radius-md);
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      animation: fadeIn 0.2s ease;
-      transition: background 0.12s;
-    }
-
-    .account-row:hover { background: #323538; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(3px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .account-avatar {
-      width: 34px; height: 34px;
-      border-radius: 2px;
-      background: linear-gradient(135deg, #3a3d42, #2a2d30);
-      border: 1px solid #4a4d52;
-      color: var(--steam-teal);
-      font-size: 13px;
-      font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .account-info { flex: 1; min-width: 0; }
-
-    .account-name {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--steam-header);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .account-meta {
-      font-size: 11px;
-      color: var(--steam-text-dark);
-      margin-top: 2px;
-    }
-
-    .cooldown-badge {
-      font-size: 11px;
-      padding: 3px 9px;
-      border-radius: 2px;
-      background: var(--steam-green-bg);
-      color: var(--steam-green);
-      font-weight: 700;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      border: 1px solid rgba(164,208,7,0.2);
-    }
-
-    .delete-btn {
-      background: none;
-      border: none;
-      color: var(--steam-text-dark);
-      cursor: pointer;
-      padding: 5px;
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      font-size: 16px;
-      transition: color 0.15s, background 0.15s;
-    }
-
-    .delete-btn:hover { color: var(--steam-red); background: rgba(224,64,64,0.1); }
-
-    /* ── Zero day highlight ── */
-    .account-row.expired {
-      background: #0f2010;
-      border-color: #3a7a1a;
-    }
-
-    .account-row.expired:hover { background: #162a17; }
-
-    .account-row.expired .account-name { color: #a4d007; }
-
-    .account-row.expired .cooldown-badge {
-      background: #a4d007;
-      color: #0a1200;
-      border-color: #a4d007;
-      font-weight: 900;
-      animation: pulse-green 1.4s ease-in-out infinite;
-    }
-
-    @keyframes pulse-green {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(164,208,7,0.5); }
-      50%       { box-shadow: 0 0 8px 3px rgba(164,208,7,0.25); }
-    }
-
-    /* ── Empty state ── */
-    .empty-state {
-      text-align: center;
-      padding: 2.5rem;
-      color: var(--steam-text-dark);
-      font-size: 13px;
-      border: 1px dashed var(--steam-border2);
-      border-radius: var(--radius-md);
-      background: var(--steam-panel);
-    }
-
-    .empty-state svg { display: block; margin: 0 auto 10px; opacity: 0.5; }
-
-    /* ── Footer ── */
-    .footer {
-      text-align: center;
-      font-size: 11px;
-      color: var(--steam-text-dark);
-      padding: 1rem;
-      border-top: 1px solid var(--steam-border2);
-      margin-top: 2rem;
-    }
-
-    .lock-user {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: #323538;
-      border-radius: 6px;
-      padding: 10px 14px;
-      margin-bottom: 1.2rem;
-      text-align: left;
-    }
-
-    .lock-user img {
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      border: 2px solid #5865F2;
-    }
-
-    .lock-user-info { flex: 1; }
-    .lock-user-name { font-size: 14px; font-weight: 700; color: #c6d4df; }
-    .lock-user-tag  { font-size: 11px; color: var(--steam-text-dim); }
-
-
-    /* ── Lock Screen ── */
-    #lock-screen {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(10,12,18,0.98);
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    /* Lock screen */
+    #lock-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,12,18,0.98); z-index: 9999; display: flex; align-items: center; justify-content: center; }
     #lock-screen.hidden { display: none; }
-    .lock-box {
-      background: #2a2d30;
-      border: 1px solid #3a3d42;
-      border-radius: 8px;
-      padding: 2rem;
-      width: 100%;
-      max-width: 320px;
-      text-align: center;
-    }
-    .lock-title {
-      font-family: "Arial Black", Impact, sans-serif;
-      font-size: 20px;
-      font-weight: 900;
-      color: #c6d4df;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-      text-shadow: 0 0 16px rgba(102,192,244,0.4);
-    }
-    .lock-sub {
-      font-size: 12px;
-      color: var(--steam-text-dim);
-      margin-bottom: 1.2rem;
-    }
-    .lock-input {
-      width: 100%;
-      padding: 9px 12px;
-      font-size: 15px;
-      border: 1px solid #4a4d52;
-      border-radius: 4px;
-      background: #3a3d42;
-      color: var(--steam-text);
-      outline: none;
-      font-family: monospace;
-      text-align: center;
-      letter-spacing: 0.12em;
-      margin-bottom: 10px;
-      transition: border-color 0.15s;
-    }
-    .lock-input:focus {
-      border-color: var(--steam-teal);
-      box-shadow: 0 0 0 2px rgba(102,192,244,0.15);
-    }
-    .lock-btn {
-      width: 100%;
-      padding: 10px;
-      background: linear-gradient(to right, #47bfff 0%, #1184c7 60%);
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      cursor: pointer;
-      font-family: inherit;
-      transition: filter 0.15s;
-    }
+    .lock-box { background: #2a2d30; border: 1px solid #3a3d42; border-radius: 8px; padding: 2rem; width: 100%; max-width: 320px; text-align: center; }
+    .lock-title { font-family: "Arial Black", Impact, sans-serif; font-size: 20px; font-weight: 900; color: #c6d4df; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; text-shadow: 0 0 16px rgba(102,192,244,0.4); }
+    .lock-sub { font-size: 12px; color: #8f98a0; margin-bottom: 1.2rem; }
+    .lock-input { width: 100%; padding: 9px 12px; font-size: 15px; border: 1px solid #4a4d52; border-radius: 4px; background: #3a3d42; color: #c6d4df; outline: none; font-family: monospace; text-align: center; letter-spacing: 0.12em; margin-bottom: 10px; transition: border-color 0.15s; }
+    .lock-input:focus { border-color: #66c0f4; box-shadow: 0 0 0 2px rgba(102,192,244,0.15); }
+    .lock-btn { width: 100%; padding: 10px; background: linear-gradient(to right, #47bfff 0%, #1184c7 60%); color: #fff; border: none; border-radius: 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; font-family: inherit; transition: filter 0.15s; }
     .lock-btn:hover { filter: brightness(1.12); }
-    .lock-error {
-      font-size: 12px;
-      color: var(--steam-red);
-      margin-bottom: 8px;
-      min-height: 16px;
-    }
+    .lock-error { font-size: 12px; color: #e04040; margin-bottom: 8px; min-height: 16px; }
 
+    /* Header */
+    .header { background: linear-gradient(to bottom, #000 0%, #1b2838 100%); border-bottom: 1px solid #000; padding: 0 2rem; display: flex; align-items: center; gap: 14px; height: 56px; }
+    .header-title { font-size: 15px; font-weight: 700; color: #66c0f4; letter-spacing: 0.04em; text-transform: uppercase; }
+    .header-divider { width: 1px; height: 24px; background: #3d6c8a; margin: 0 4px; }
+    .header-sub { font-size: 12px; color: #8f98a0; letter-spacing: 0.02em; }
+
+    /* Page */
+    .page { max-width: 560px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+    .page-heading { font-size: 13px; font-weight: 700; color: #66c0f4; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; padding-bottom: 6px; border-bottom: 1px solid #2a475e; }
+
+    /* Form card */
+    .form-card { background: #2a2d30; border: 1px solid #3a3d42; border-radius: 4px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .form-title { font-size: 13px; font-weight: 700; color: #c6d4df; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
+    .field-label { font-size: 12px; color: #8f98a0; margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+    input[type="text"], input[type="number"] { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid #4a4d52; border-radius: 3px; background: #3a3d42; color: #c6d4df; outline: none; font-family: inherit; transition: border-color 0.15s; }
+    input[type="text"] { margin-bottom: 1rem; }
+    input[type="text"]:focus, input[type="number"]:focus { border-color: #66c0f4; box-shadow: 0 0 0 2px rgba(102,192,244,0.12); background: #444750; }
+    input::placeholder { color: #627f99; }
+
+    /* Cooldown grid */
+    .cooldown-grid-wrap { margin-bottom: 1rem; }
+    .cooldown-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 0; }
+    .cd-btn { border: 1px solid #4a4d52; background: linear-gradient(to bottom, #3a3d42 0%, #2e3135 100%); border-radius: 3px; padding: 10px 6px; cursor: pointer; text-align: center; transition: all 0.12s; color: #c6d4df; font-family: inherit; }
+    .cd-btn:hover { background: linear-gradient(to bottom, #46494e 0%, #3a3d42 100%); border-color: #606368; }
+    .cd-btn.selected { background: linear-gradient(to bottom, #75b2dd 0%, #4d8fc7 100%); border-color: #66c0f4; color: #fff; }
+    .cd-btn .cd-days { font-size: 18px; font-weight: 700; display: block; line-height: 1.2; color: #fff; }
+    .cd-btn .cd-label { font-size: 10px; color: #8f98a0; display: block; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .cd-btn.selected .cd-label { color: rgba(255,255,255,0.8); }
+    .custom-input-wrap { display: none; margin-top: 8px; gap: 8px; align-items: center; }
+    .custom-input-wrap.visible { display: flex; }
+    .custom-days-input { flex: 1; min-width: 0; }
+    .custom-days-label { font-size: 13px; color: #8f98a0; white-space: nowrap; }
+
+    /* Add button */
+    .add-btn { width: 100%; padding: 10px; background: linear-gradient(to right, #47bfff 0%, #1184c7 60%); color: #fff; border: none; border-radius: 3px; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; transition: filter 0.15s; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+    .add-btn:hover { filter: brightness(1.1); }
+    .error-msg { font-size: 12px; color: #e04040; margin-top: -10px; margin-bottom: 10px; display: none; }
+
+    /* Section */
+    .section-label { font-size: 13px; font-weight: 700; color: #66c0f4; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding-bottom: 6px; border-bottom: 1px solid #2a475e; }
+
+    /* Account rows */
+    .accounts-list { display: flex; flex-direction: column; gap: 4px; }
+    .account-row { background: #2a2d30; border: 1px solid #3a3d42; border-radius: 4px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; animation: fadeIn 0.2s ease; transition: background 0.12s; }
+    .account-row:hover { background: #323538; }
+    .account-row.expired { background: #0f2010; border-color: #3a7a1a; }
+    .account-row.expired:hover { background: #162a17; }
+    .account-row.expired .account-name { color: #a4d007; }
+    .account-row.expired .cooldown-badge { background: #a4d007; color: #0a1200; border-color: #a4d007; font-weight: 900; animation: pulse-green 1.4s ease-in-out infinite; }
+    @keyframes pulse-green { 0%, 100% { box-shadow: 0 0 0 0 rgba(164,208,7,0.5); } 50% { box-shadow: 0 0 8px 3px rgba(164,208,7,0.25); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+    .account-avatar { width: 34px; height: 34px; border-radius: 2px; background: linear-gradient(135deg, #3a3d42, #2a2d30); border: 1px solid #4a4d52; color: #66c0f4; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .account-info { flex: 1; min-width: 0; }
+    .account-name { font-size: 14px; font-weight: 700; color: #c6d4df; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .account-meta { font-size: 11px; color: #627f99; margin-top: 2px; }
+    .cooldown-badge { font-size: 11px; padding: 3px 9px; border-radius: 2px; background: #1a2d00; color: #a4d007; font-weight: 700; flex-shrink: 0; display: flex; align-items: center; gap: 4px; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid rgba(164,208,7,0.2); }
+    .delete-btn { background: none; border: none; color: #627f99; cursor: pointer; padding: 5px; border-radius: 3px; display: flex; align-items: center; font-size: 16px; transition: color 0.15s, background 0.15s; }
+    .delete-btn:hover { color: #e04040; background: rgba(224,64,64,0.1); }
+    .empty-state { text-align: center; padding: 2.5rem; color: #627f99; font-size: 13px; border: 1px dashed #2a475e; border-radius: 4px; background: #1b2838; }
+    .footer { text-align: center; font-size: 11px; color: #627f99; padding: 1rem; border-top: 1px solid #2a475e; margin-top: 2rem; }
   </style>
 </head>
 <body>
+
   <video id="bg-video" autoplay loop muted playsinline>
     <source src="https://shared.fastly.steamstatic.com/community_assets/images/items/730/28280d425d20a4d8cd9cfeff3389c234968ca301.webm" type="video/webm">
   </video>
@@ -533,73 +109,42 @@
       <div class="lock-sub">Enter the password to continue</div>
       <input class="lock-input" type="password" id="pw-input" placeholder="••••••••" autocomplete="off" />
       <div class="lock-error" id="lock-error"></div>
-      <button class="lock-btn" onclick="submitPassword()">Unlock</button>
+      <button class="lock-btn" id="unlock-btn" onclick="submitPassword()">Unlock</button>
     </div>
   </div>
-
-      <div class="lock-sub">Enter your license key to continue</div>
-      <input class="lock-input" type="text" id="key-input" placeholder="Enter license key..." autocomplete="off" />
-      <div class="lock-error" id="lock-error"></div>
-      <div class="lock-checking" id="lock-checking">⏳ Validating key...</div>
-      <div class="lock-success" id="lock-success"></div>
-      <button class="lock-btn" id="unlock-btn" onclick="submitKey()">Unlock</button>
-    </div>
-  </div>
-
-
 
   <!-- Header -->
   <div class="header">
-    <div class="header-logo">
-      <svg class="steam-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.607 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.497 1.009 2.455-.397.957-1.494 1.41-2.455 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/>
-      </svg>
-      <span class="header-title">Steam</span>
-    </div>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="#66c0f4"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.607 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.497 1.009 2.455-.397.957-1.494 1.41-2.455 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/></svg>
+    <span class="header-title">Steam</span>
     <div class="header-divider"></div>
     <span class="header-sub">Account Cooldown Manager</span>
   </div>
 
   <div class="page">
     <p class="page-heading">Add New Account</p>
-
     <div class="form-card">
       <p class="form-title">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Account Details
       </p>
-
       <label class="field-label" for="acct-name">Account Name</label>
-      <input type="text" id="acct-name" placeholder="e.g. Main Account, Alt Account…" maxlength="60"
-        onkeydown="if(event.key==='Enter') addAccount()" />
-
+      <input type="text" id="acct-name" placeholder="e.g. Main Account, Alt Account…" maxlength="60" onkeydown="if(event.key==='Enter') addAccount()" />
       <div class="error-msg" id="err-msg">Please fill in both an account name and cooldown period.</div>
-
       <label class="field-label">Cooldown Period</label>
       <div class="cooldown-grid-wrap">
         <div class="cooldown-grid">
-          <button class="cd-btn" data-days="1" onclick="selectCd(this)">
-            <span class="cd-days">1</span><span class="cd-label">Day</span>
-          </button>
-          <button class="cd-btn" data-days="7" onclick="selectCd(this)">
-            <span class="cd-days">7</span><span class="cd-label">Days</span>
-          </button>
-          <button class="cd-btn" data-days="30" onclick="selectCd(this)">
-            <span class="cd-days">30</span><span class="cd-label">Days</span>
-          </button>
-          <button class="cd-btn" data-days="180" onclick="selectCd(this)">
-            <span class="cd-days">180</span><span class="cd-label">Days</span>
-          </button>
-          <button class="cd-btn" data-days="custom" onclick="selectCd(this)">
-            <span class="cd-days">✏️</span><span class="cd-label">Custom</span>
-          </button>
+          <button class="cd-btn" data-days="1" onclick="selectCd(this)"><span class="cd-days">1</span><span class="cd-label">Day</span></button>
+          <button class="cd-btn" data-days="7" onclick="selectCd(this)"><span class="cd-days">7</span><span class="cd-label">Days</span></button>
+          <button class="cd-btn" data-days="30" onclick="selectCd(this)"><span class="cd-days">30</span><span class="cd-label">Days</span></button>
+          <button class="cd-btn" data-days="180" onclick="selectCd(this)"><span class="cd-days">180</span><span class="cd-label">Days</span></button>
+          <button class="cd-btn" data-days="custom" onclick="selectCd(this)"><span class="cd-days">✏️</span><span class="cd-label">Custom</span></button>
         </div>
         <div class="custom-input-wrap" id="custom-input-wrap">
           <input class="custom-days-input" type="number" id="custom-days" min="0" max="9999" placeholder="e.g. 14" />
           <span class="custom-days-label">days</span>
         </div>
       </div>
-
       <button class="add-btn" onclick="addAccount()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add to List
@@ -609,21 +154,15 @@
     <p class="section-label">Saved Accounts</p>
     <div class="accounts-list" id="accounts-list">
       <div class="empty-state" id="empty-state">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 8px;"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
         No accounts added yet
       </div>
     </div>
-
     <div class="footer">© C0D3M4N — Account Cooldown Manager</div>
   </div>
 
   <script>
-    let selectedDays = null;
-    let accounts = JSON.parse(localStorage.getItem('cooldown_accounts') || '[]');
-    renderList();
-
     // ── Password Lock ──
-    // To change the password, update this value and re-upload to GitHub
     const ACCESS_PASSWORD = 'C0D3M4N2024';
 
     function submitPassword() {
@@ -648,6 +187,79 @@
       document.getElementById('lock-screen').classList.add('hidden');
     }
 
+    // ── App ──
+    let selectedDays = null;
+    let accounts = JSON.parse(localStorage.getItem('cooldown_accounts') || '[]');
+    renderList();
+
+    function save() { localStorage.setItem('cooldown_accounts', JSON.stringify(accounts)); }
+
+    function selectCd(btn) {
+      document.querySelectorAll('.cd-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      const wrap = document.getElementById('custom-input-wrap');
+      if (btn.dataset.days === 'custom') {
+        selectedDays = 'custom';
+        wrap.classList.add('visible');
+        document.getElementById('custom-days').focus();
+      } else {
+        selectedDays = parseInt(btn.dataset.days);
+        wrap.classList.remove('visible');
+        document.getElementById('custom-days').value = '';
+      }
+      document.getElementById('err-msg').style.display = 'none';
+    }
+
+    function initials(name) { return name.trim().split(/\s+/).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
+    function cdLabel(days) { return days === 1 ? '1 Day' : days + ' Days'; }
+    function addedOn() { return new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }); }
+
+    function addAccount() {
+      const nameEl = document.getElementById('acct-name');
+      const name = nameEl.value.trim();
+      const err = document.getElementById('err-msg');
+      let days = selectedDays;
+      if (days === 'custom') {
+        const val = parseInt(document.getElementById('custom-days').value);
+        if (isNaN(val) || val < 0) { err.textContent = 'Please enter a valid number of days.'; err.style.display = 'block'; return; }
+        days = val;
+      }
+      if (!name || days === null || days === undefined) { err.textContent = 'Please fill in both an account name and cooldown period.'; err.style.display = 'block'; return; }
+      err.style.display = 'none';
+      accounts.push({ id: Date.now(), name, days, added: addedOn() });
+      save();
+      nameEl.value = '';
+      selectedDays = null;
+      document.getElementById('custom-days').value = '';
+      document.getElementById('custom-input-wrap').classList.remove('visible');
+      document.querySelectorAll('.cd-btn').forEach(b => b.classList.remove('selected'));
+      renderList();
+    }
+
+    function removeAccount(id) { accounts = accounts.filter(a => a.id !== id); save(); renderList(); }
+
+    function renderList() {
+      const list = document.getElementById('accounts-list');
+      const empty = document.getElementById('empty-state');
+      if (accounts.length === 0) { list.innerHTML = ''; list.appendChild(empty); empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      list.innerHTML = accounts.map(a => `
+        <div class="account-row ${a.days === 0 ? 'expired' : ''}">
+          <div class="account-avatar">${initials(a.name)}</div>
+          <div class="account-info">
+            <div class="account-name">${a.name}</div>
+            <div class="account-meta">Added ${a.added}</div>
+          </div>
+          <span class="cooldown-badge">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            ${cdLabel(a.days)}
+          </span>
+          <button class="delete-btn" onclick="removeAccount(${a.id})" aria-label="Remove ${a.name}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+          </button>
+        </div>
+      `).join('');
+    }
   </script>
 </body>
 </html>
