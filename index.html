@@ -716,7 +716,6 @@
     async function kaLicense(key) {
       const init = await kaInit();
       if (!init.success) throw new Error(init.message || 'Init failed');
-
       const params = new URLSearchParams({
         type: 'license',
         key: key,
@@ -737,7 +736,6 @@
 
       err.textContent = '';
       success.textContent = '';
-
       if (!key) { err.textContent = 'Please enter a license key.'; return; }
 
       btn.disabled = true;
@@ -746,7 +744,6 @@
       try {
         const result = await kaLicense(key);
         checking.style.display = 'none';
-
         if (result.success) {
           success.textContent = '✓ Key validated! Access granted.';
           localStorage.setItem('acm_unlocked', '1');
@@ -768,7 +765,6 @@
       if (e.key === 'Enter') submitKey();
     });
 
-    // Check if already unlocked
     if (localStorage.getItem('acm_unlocked') === '1') {
       document.getElementById('lock-screen').classList.add('hidden');
     }
